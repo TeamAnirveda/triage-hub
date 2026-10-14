@@ -3,6 +3,9 @@ const SEQUENCE_LENGTH = 30;
 const featureSequence = [];
 let isPredicting = false;
 
+// Live Render Backend Endpoint
+const BACKEND_URL = "https://signlingo-backend-o5ki.onrender.com/api/interpret";
+
 // 12 key facial non-manual marker landmarks
 const KEY_FACE_INDICES = [10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288];
 
@@ -67,7 +70,7 @@ function extractHolisticKeypoints(results) {
     for (let i = 0; i < 63; i++) frameFeatures.push(0.0);
   }
 
-  return frameFeatures; // Total: 174 features per frame
+  return frameFeatures; // 174 values per frame
 }
 
 // MediaPipe Setup
@@ -119,27 +122,29 @@ holistic.onResults(async (results) => {
     featureSequence.shift();
   }
 
-  // Predict when buffer is full
+  // Trigger Live Render Backend Inference
   if (featureSequence.length === SEQUENCE_LENGTH && !isPredicting) {
     isPredicting = true;
     try {
-      const res = await fetch("/api/model/predict", {
+      const res = await fetch(BACKEND_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sequence: featureSequence })
+        body: JSON.stringify({ landmarks: featureSequence })
       });
       const data = await res.json();
       
-      if (data.is_valid) {
-        registerSymptom(data.sign);
+      if (data.detected) {
+        updateNurseConsoleWithInterpretation(data);
         detectionPill.innerText = `${data.sign} (${data.confidence}%)`;
         detectionPill.style.background = "#15803d";
       } else {
-        detectionPill.innerText = data.sign;
+        detectionPill.innerText = data.message || "Observing motion...";
         detectionPill.style.background = "rgba(15, 23, 42, 0.85)";
       }
     } catch (err) {
-      console.error("Inference Error:", err);
+      console.error("Backend streaming error:", err);
+      detectionPill.innerText = "Observing Gestures...";
+      detectionPill.style.background = "rgba(15, 23, 42, 0.85)";
     } finally {
       isPredicting = false;
     }
@@ -177,6 +182,34 @@ function removeSymptom(symptom, el) {
   el.parentElement.remove();
 }
 
+function updateNurseConsoleWithInterpretation(data) {
+  registerSymptom(data.sign);
+  const bucket = document.getElementById("symptoms-bucket");
+
+  let detailCard = document.getElementById("live-interpretation-card");
+  if (!detailCard) {
+    detailCard = document.createElement("div");
+    detailCard.id = "live-interpretation-card";
+    detailCard.style.cssText = "background:#fff1f2; border:1px solid #fecdd3; padding:12px; border-radius:10px; width:100%; margin-top:8px;";
+    bucket.parentElement.appendChild(detailCard);
+  }
+
+  detailCard.innerHTML = `
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+      <strong style="color:#9f1239; font-size:1rem;">Sign: ${data.sign}</strong>
+      <span style="background:#e11d48; color:white; padding:2px 8px; border-radius:12px; font-size:0.75rem; font-weight:700;">
+        ${data.urgency_level}
+      </span>
+    </div>
+    <p style="font-size:0.9rem; color:#1e293b; margin-bottom:4px;">
+      <strong>English:</strong> ${data.english_text}
+    </p>
+    <p style="font-size:0.9rem; color:#0369a1; font-weight:600;">
+      <strong>मराठी भाषांतर:</strong> ${data.marathi_text}
+    </p>
+  `;
+}
+
 function dispatchToPatient(wordKey) {
   const area = document.getElementById("visual-sign-card");
   const sign = signVisuals[wordKey];
@@ -202,34 +235,22 @@ function sendCustomStaffText() {
   input.value = "";
 }
 
-// ----------------- DATABASE COMMIT & PDF EXPORT -----------------
-async function commitTriageIntake() {
+// ----------------- TICKET GENERATION & PDF EXPORT -----------------
+function commitTriageIntake() {
   if (currentSymptoms.size === 0) {
     alert("Please perform and detect at least one patient symptom before generating a ticket.");
     return;
   }
 
-  const payload = {
-    patient_identifier: "OPD-DHH-Patient",
-    detected_signs: Array.from(currentSymptoms),
-    nurse_notes: "Processed via SignLingo Dynamic Interpretation Terminal."
-  };
-
-  try {
-    const res = await fetch("/api/intake/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    const data = await res.json();
-    renderTriageTicket(data);
-  } catch (err) {
-    console.error("Backend error:", err);
-    alert("Error communicating with backend database.");
+  const intakeId = "TRG-" + new Date().getFullYear() + "-" + Math.random().toString(36).substring(2, 7).toUpperCase();
+  const timeStr = new Date().toLocaleString();
+  let priority = "STANDARD (Green)";
+  if (currentSymptoms.has("Heart Attack") || currentSymptoms.has("Help / Emergency") || currentSymptoms.has("Fracture / Trauma")) {
+    priority = "EMERGENCY (Red)";
+  } else if (currentSymptoms.has("Fever") || currentSymptoms.has("Stomach Ache")) {
+    priority = "URGENT (Yellow)";
   }
-}
 
-function renderTriageTicket(data) {
   const container = document.getElementById("triage-ticket-output");
   container.style.display = "block";
   container.innerHTML = `
@@ -237,17 +258,17 @@ function renderTriageTicket(data) {
       <div class="ticket-header">
         <div>
           <h2>EMERGENCY TRIAGE INTAKE SUMMARY</h2>
-          <p style="font-size:0.8rem; color:#64748b;">Hospital OPD / Casualty Intake Record</p>
+          <p style="font-size:0.8rem; color:#64748b;">Hospital Casualty Intake Record</p>
         </div>
         <div style="text-align:right;">
-          <strong>ID: ${data.intake_id}</strong><br>
-          <span style="font-size:0.8rem;">${data.timestamp}</span>
+          <strong>ID: ${intakeId}</strong><br>
+          <span style="font-size:0.8rem;">${timeStr}</span>
         </div>
       </div>
-      <p><strong>Priority Status:</strong> <span style="color:#b91c1c; font-weight:800;">${data.priority}</span></p>
+      <p><strong>Priority Status:</strong> <span style="color:#b91c1c; font-weight:800;">${priority}</span></p>
       <p style="margin-top:0.5rem;"><strong>Primary Chief Complaints (ISL Detected):</strong></p>
       <ul style="margin: 0.5rem 0 1rem 1.5rem;">
-        ${data.detected_signs.map(s => `<li>${s}</li>`).join('')}
+        ${Array.from(currentSymptoms).map(s => `<li>${s}</li>`).join('')}
       </ul>
       <p style="font-size:0.85rem; color:#475569; border-top:1px solid #cbd5e1; padding-top:0.5rem;">
         Generated automatically via SignLingo TriageHub Assistive Terminal.
