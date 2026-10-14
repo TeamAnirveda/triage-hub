@@ -2,18 +2,255 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>SignLingo TriageHub - Emergency ISL Translation Terminal</title>
+  <title>SignLingo TriageHub - Emergency ISL Terminal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link rel="stylesheet" href="style.css">
+  
+  <!-- FontAwesome Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  <!-- MediaPipe Holistic & Camera Dependencies -->
+  <!-- MediaPipe Hands & Camera Utils -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
   
   <!-- Client-side PDF Ticket Generator -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+    body {
+      background: #f1f5f9;
+      color: #1e293b;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    header {
+      background: #0f172a;
+      color: #ffffff;
+      padding: 0.85rem 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+    .logo span {
+      color: #38bdf8;
+    }
+    .header-status {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      color: #94a3b8;
+    }
+    .pulse-indicator {
+      width: 10px;
+      height: 10px;
+      background: #22c55e;
+      border-radius: 50%;
+      box-shadow: 0 0 8px #22c55e;
+    }
+    .triage-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+      padding: 1rem;
+      flex: 1;
+    }
+    @media (min-width: 900px) {
+      .triage-grid {
+        grid-template-columns: 1fr 1.1fr;
+        padding: 1.5rem;
+      }
+    }
+    .terminal-panel {
+      background: #ffffff;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      padding: 1.25rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    }
+    .panel-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .badge {
+      background: #e0f2fe;
+      color: #0369a1;
+      font-size: 0.75rem;
+      font-weight: 700;
+      padding: 4px 10px;
+      border-radius: 12px;
+    }
+    .staff-badge {
+      background: #fef3c7;
+      color: #b45309;
+    }
+    .video-wrapper {
+      position: relative;
+      width: 100%;
+      height: 280px;
+      background: #000000;
+      border-radius: 12px;
+      overflow: hidden;
+    }
+    #webcam {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(-1);
+    }
+    #output-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      transform: scaleX(-1);
+    }
+    .detection-pill {
+      position: absolute;
+      bottom: 12px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.85);
+      color: #38bdf8;
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      white-space: nowrap;
+      transition: all 0.2s ease;
+    }
+    .patient-visual-feedback {
+      background: #f8fafc;
+      border: 1.5px dashed #cbd5e1;
+      border-radius: 12px;
+      padding: 1rem;
+      flex: 1;
+    }
+    .visual-sign-card {
+      margin-top: 0.5rem;
+      background: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 1rem;
+      text-align: center;
+      min-height: 110px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .card {
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      padding: 1rem;
+    }
+    .card h4 {
+      font-size: 0.85rem;
+      color: #475569;
+      text-transform: uppercase;
+      margin-bottom: 0.65rem;
+    }
+    .symptoms-bucket {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      min-height: 48px;
+      align-items: center;
+    }
+    .symptom-tag {
+      background: #fee2e2;
+      color: #991b1b;
+      border: 1px solid #fecaca;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-weight: 700;
+      font-size: 0.85rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .prompt-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .prompt-chips button {
+      background: #ffffff;
+      border: 1px solid #cbd5e1;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .prompt-chips button:hover {
+      background: #e2e8f0;
+    }
+    .speech-input-box {
+      display: flex;
+      gap: 0.5rem;
+    }
+    .speech-input-box input {
+      flex: 1;
+      padding: 0.65rem 0.85rem;
+      border: 1px solid #cbd5e1;
+      border-radius: 8px;
+      font-size: 0.9rem;
+    }
+    .speech-input-box button {
+      background: #0284c7;
+      color: white;
+      border: none;
+      padding: 0 1.25rem;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .generate-btn {
+      width: 100%;
+      background: #16a34a;
+      color: white;
+      border: none;
+      padding: 0.85rem;
+      border-radius: 10px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .ticket-container {
+      background: #ffffff;
+      border: 3px solid #0f172a;
+      padding: 1.5rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+    }
+    .ticket-header {
+      border-bottom: 2px solid #0f172a;
+      padding-bottom: 0.75rem;
+      margin-bottom: 1rem;
+      display: flex;
+      justify-content: space-between;
+    }
+  </style>
 </head>
 <body>
   <header>
@@ -22,15 +259,15 @@
       <h2>SignLingo <span>TriageHub</span></h2>
     </div>
     <div class="header-status">
-      <span class="pulse-indicator"></span> Bi-Directional Triage Terminal Active
+      <span class="pulse-indicator"></span> Bi-Directional Terminal Active
     </div>
   </header>
 
   <main class="triage-grid">
-    <!-- TERMINAL A: PATIENT INTERACTION (Dynamic Skeletal Vision) -->
-    <section class="terminal-panel patient-panel">
+    <!-- TERMINAL A: PATIENT INTERACTION (Side A) -->
+    <section class="terminal-panel">
       <div class="panel-header">
-        <h3><i class="fa-solid fa-camera"></i> Patient Input Terminal (Dynamic ISL Vision)</h3>
+        <h3><i class="fa-solid fa-camera"></i> Patient Input Terminal (ISL Vision)</h3>
         <span class="badge">Side A (Patient)</span>
       </div>
 
@@ -40,17 +277,17 @@
         <div id="detection-pill" class="detection-pill">Observing Gestures...</div>
       </div>
 
-      <!-- REVERSE TRANSLATION DISPLAY: Staff to Patient -->
+      <!-- Reverse Visual Sign Feedback (Staff to Patient) -->
       <div class="patient-visual-feedback">
         <h4>Staff Directions to Patient / डॉक्टरांचे निर्देश:</h4>
         <div id="visual-sign-card" class="visual-sign-card">
-          <p class="placeholder-text">Staff messages appear here as signs & visual prompts.</p>
+          <p style="color:#94a3b8; font-size:0.9rem;">Staff prompts appear here as signs & visual icons.</p>
         </div>
       </div>
     </section>
 
-    <!-- TERMINAL B: CLINICAL STAFF CONSOLE -->
-    <section class="terminal-panel staff-panel">
+    <!-- TERMINAL B: CLINICAL STAFF CONSOLE (Side B) -->
+    <section class="terminal-panel">
       <div class="panel-header">
         <h3><i class="fa-solid fa-user-doctor"></i> Healthcare Staff Console</h3>
         <span class="badge staff-badge">Side B (Triage Staff)</span>
@@ -60,13 +297,13 @@
       <div class="card">
         <h4>Auto-Decoded Symptoms (from Patient ISL Gestures)</h4>
         <div id="symptoms-bucket" class="symptoms-bucket">
-          <span class="empty-hint">No symptoms registered yet. Perform a sign in camera view.</span>
+          <span class="empty-hint" style="color:#94a3b8; font-size:0.85rem;">No symptoms registered yet. Hold hand gesture in front of camera.</span>
         </div>
       </div>
 
-      <!-- Staff Speech / Visual Response Triggers -->
+      <!-- Staff Prompts to Patient -->
       <div class="card">
-        <h4>Communicate with Patient (Sends Visual Signs to Patient Screen)</h4>
+        <h4>Communicate with Patient (Sends Signs to Patient Screen)</h4>
         <div class="prompt-chips">
           <button onclick="dispatchToPatient('Doctor')">Doctor Coming / डॉक्टर येत आहेत</button>
           <button onclick="dispatchToPatient('Wait')">Please Wait / कृपया थांबा</button>
@@ -80,7 +317,7 @@
       </div>
 
       <!-- Action Panel: Generate Triage Summary -->
-      <div class="card action-card">
+      <div class="card">
         <button class="generate-btn" onclick="commitTriageIntake()">
           <i class="fa-solid fa-file-medical"></i> Finalize & Generate Triage Ticket
         </button>
@@ -91,6 +328,214 @@
     </section>
   </main>
 
-  <script src="app.js"></script>
+  <script>
+    let currentSymptoms = new Set();
+    let lastDetectedGesture = null;
+    let holdCount = 0;
+
+    const signVisuals = {
+      "Doctor": {
+        title: "DOCTOR / डॉक्टर",
+        instruction: "Tapping pulse point on wrist twice.",
+        svg: `<svg width="70" height="70" viewBox="0 0 120 120"><rect x="15" y="65" width="85" height="28" rx="8" fill="#e2e8f0" stroke="#718096" stroke-width="2"/><circle cx="45" cy="79" r="6" fill="#feb2b2" stroke="#e53e3e" stroke-width="1.5"/><path d="M 40 20 L 40 70 M 50 20 L 50 70 M 58 45 L 68 55" stroke="#2b6cb0" stroke-width="6" stroke-linecap="round"/></svg>`
+      },
+      "Hospital": {
+        title: "HOSPITAL ADMISSION / रुग्णालय",
+        instruction: "Draw cross on upper shoulder/arm.",
+        svg: `<svg width="70" height="70" viewBox="0 0 120 120"><path d="M 25 30 Q 55 15 95 30 L 85 95 Q 55 105 25 95 Z" fill="#ebf8ff" stroke="#3182ce" stroke-width="2"/><line x1="60" y1="35" x2="60" y2="85" stroke="#e53e3e" stroke-width="6" stroke-linecap="round"/><line x1="38" y1="58" x2="82" y2="58" stroke="#e53e3e" stroke-width="6" stroke-linecap="round"/></svg>`
+      },
+      "Wait": {
+        title: "PLEASE WAIT / कृपया थांबा",
+        instruction: "Flat open hand held forward calmly.",
+        svg: `<svg width="70" height="70" viewBox="0 0 120 120"><circle cx="60" cy="60" r="45" fill="#fef3c7" stroke="#d97706" stroke-width="3"/><path d="M 60 30 L 60 65 L 85 65" stroke="#d97706" stroke-width="6" stroke-linecap="round"/></svg>`
+      },
+      "Water": {
+        title: "DRINK WATER / पाणी",
+        instruction: "Form 'W' handshape near chin.",
+        svg: `<svg width="70" height="70" viewBox="0 0 120 120"><line x1="45" y1="75" x2="40" y2="25" stroke="#3182ce" stroke-width="5" stroke-linecap="round"/><line x1="55" y1="75" x2="55" y2="20" stroke="#3182ce" stroke-width="5" stroke-linecap="round"/><line x1="65" y1="75" x2="70" y2="25" stroke="#3182ce" stroke-width="5" stroke-linecap="round"/></svg>`
+      }
+    };
+
+    function dist(p1, p2) {
+      return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
+    }
+
+    function classifyTriageSign(landmarks) {
+      if (!landmarks || landmarks.length === 0) return null;
+      const hand = landmarks[0];
+      const wrist = hand[0];
+
+      const isIndexExt = dist(hand[8], wrist) > dist(hand[6], wrist) * 1.15;
+      const isMiddleExt = dist(hand[12], wrist) > dist(hand[10], wrist) * 1.15;
+      const isRingExt = dist(hand[16], wrist) > dist(hand[14], wrist) * 1.15;
+      const isPinkyExt = dist(hand[20], wrist) > dist(hand[18], wrist) * 1.15;
+
+      // Closed Fist: Acute Chest Distress / Heart Attack
+      if (!isIndexExt && !isMiddleExt && !isRingExt && !isPinkyExt) {
+        return "Heart Attack / Acute Chest Distress";
+      }
+      // Open Palm: High Fever / Headache Check
+      if (isIndexExt && isMiddleExt && isRingExt && isPinkyExt) {
+        return "High Fever / Elevated Temperature";
+      }
+      // Single Index pointing: Localized Pain
+      if (isIndexExt && !isMiddleExt && !isRingExt && !isPinkyExt) {
+        return "Severe Abdominal Pain";
+      }
+      return null;
+    }
+
+    const videoElement = document.getElementById("webcam");
+    const canvasElement = document.getElementById("output-canvas");
+    const canvasCtx = canvasElement.getContext("2d");
+    const detectionPill = document.getElementById("detection-pill");
+
+    const hands = new Hands({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
+    });
+
+    hands.setOptions({
+      maxNumHands: 2,
+      modelComplexity: 1,
+      minDetectionConfidence: 0.55,
+      minTrackingConfidence: 0.55
+    });
+
+    hands.onResults((results) => {
+      canvasCtx.save();
+      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+      canvasElement.width = videoElement.videoWidth || 480;
+      canvasElement.height = videoElement.videoHeight || 360;
+
+      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+        for (const lms of results.multiHandLandmarks) {
+          drawConnectors(canvasCtx, lms, HAND_CONNECTIONS, { color: '#38bdf8', lineWidth: 3 });
+          drawLandmarks(canvasCtx, lms, { color: '#ef4444', lineWidth: 1, radius: 4 });
+        }
+
+        const detected = classifyTriageSign(results.multiHandLandmarks);
+        if (detected) {
+          if (detected === lastDetectedGesture) {
+            holdCount++;
+            if (holdCount > 10) {
+              registerSymptom(detected);
+              detectionPill.innerText = `Detected: ${detected}`;
+              detectionPill.style.background = "#15803d";
+            }
+          } else {
+            lastDetectedGesture = detected;
+            holdCount = 0;
+          }
+        }
+      } else {
+        detectionPill.innerText = "Observing Gestures...";
+        detectionPill.style.background = "rgba(15, 23, 42, 0.85)";
+      }
+      canvasCtx.restore();
+    });
+
+    const camera = new Camera(videoElement, {
+      onFrame: async () => {
+        await hands.send({ image: videoElement });
+      },
+      width: 480,
+      height: 360
+    });
+    camera.start();
+
+    function registerSymptom(symptom) {
+      if (currentSymptoms.has(symptom)) return;
+      currentSymptoms.add(symptom);
+
+      const bucket = document.getElementById("symptoms-bucket");
+      const emptyHint = bucket.querySelector(".empty-hint");
+      if (emptyHint) emptyHint.remove();
+
+      const tag = document.createElement("div");
+      tag.className = "symptom-tag";
+      tag.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${symptom} <i class="fa-solid fa-xmark" style="cursor:pointer; margin-left:6px;" onclick="removeSymptom('${symptom}', this)"></i>`;
+      bucket.appendChild(tag);
+    }
+
+    function removeSymptom(symptom, el) {
+      currentSymptoms.delete(symptom);
+      el.parentElement.remove();
+    }
+
+    function dispatchToPatient(wordKey) {
+      const area = document.getElementById("visual-sign-card");
+      const sign = signVisuals[wordKey];
+      if (sign) {
+        area.innerHTML = `
+          <div style="margin-bottom:6px;">${sign.svg}</div>
+          <h3 style="color:#0369a1; font-size:1.05rem;">${sign.title}</h3>
+          <p style="font-size:0.8rem; color:#475569;">${sign.instruction}</p>
+        `;
+      }
+    }
+
+    function sendCustomStaffText() {
+      const input = document.getElementById("nurse-custom-text");
+      const val = input.value.trim();
+      if (!val) return;
+      
+      const area = document.getElementById("visual-sign-card");
+      area.innerHTML = `
+        <h3 style="color:#0f172a; font-size:1.1rem; margin-bottom: 4px;">Staff Notice:</h3>
+        <p style="font-size:1.05rem; color:#0284c7; font-weight:700;">"${val}"</p>
+      `;
+      input.value = "";
+    }
+
+    function commitTriageIntake() {
+      if (currentSymptoms.size === 0) {
+        alert("Hold your hand in front of the camera to detect a symptom before generating a ticket.");
+        return;
+      }
+
+      const intakeId = "TRG-" + new Date().getFullYear() + "-" + Math.random().toString(36).substring(2, 7).toUpperCase();
+      const timeStr = new Date().toLocaleString();
+      let priority = "STANDARD (Green)";
+      if (currentSymptoms.has("Heart Attack / Acute Chest Distress")) {
+        priority = "EMERGENCY (Red)";
+      } else if (currentSymptoms.has("High Fever / Elevated Temperature") || currentSymptoms.has("Severe Abdominal Pain")) {
+        priority = "URGENT (Yellow)";
+      }
+
+      const container = document.getElementById("triage-ticket-output");
+      container.style.display = "block";
+      container.innerHTML = `
+        <div class="ticket-container" id="printable-ticket">
+          <div class="ticket-header">
+            <div>
+              <h2 style="font-size:1.25rem; color:#0f172a;">EMERGENCY TRIAGE INTAKE SUMMARY</h2>
+              <p style="font-size:0.8rem; color:#64748b;">Hospital Casualty Intake Record</p>
+            </div>
+            <div style="text-align:right;">
+              <strong>ID: ${intakeId}</strong><br>
+              <span style="font-size:0.75rem;">${timeStr}</span>
+            </div>
+          </div>
+          <p><strong>Priority Status:</strong> <span style="color:#b91c1c; font-weight:800;">${priority}</span></p>
+          <p style="margin-top:0.5rem;"><strong>Primary Chief Complaints (ISL Detected):</strong></p>
+          <ul style="margin: 0.5rem 0 1rem 1.5rem;">
+            ${Array.from(currentSymptoms).map(s => `<li>${s}</li>`).join('')}
+          </ul>
+          <p style="font-size:0.8rem; color:#64748b; border-top:1px solid #cbd5e1; padding-top:0.5rem;">
+            Generated via SignLingo TriageHub Assistive Terminal.
+          </p>
+        </div>
+        <button onclick="downloadTicketPDF()" style="margin-top:0.75rem; background:#0f172a; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">
+          <i class="fa-solid fa-download"></i> Save Ticket as PDF
+        </button>
+      `;
+      container.scrollIntoView({ behavior: 'smooth' });
+    }
+
+    function downloadTicketPDF() {
+      const element = document.getElementById("printable-ticket");
+      html2pdf().from(element).save("Triage_Ticket.pdf");
+    }
+  </script>
 </body>
 </html>
