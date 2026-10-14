@@ -1,542 +1,329 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>SignLingo TriageHub - Emergency ISL Terminal</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  
-  <!-- FontAwesome Icons -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-  
-  <!-- MediaPipe Hands & Camera Utils -->
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
-  
-  <!-- Client-side PDF Ticket Generator -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-
-  <style>
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-    body {
-      background: #f1f5f9;
-      color: #1e293b;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-    header {
-      background: #0f172a;
-      color: #ffffff;
-      padding: 0.85rem 1.5rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .logo {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-    }
-    .logo span {
-      color: #38bdf8;
-    }
-    .header-status {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      font-size: 0.85rem;
-      color: #94a3b8;
-    }
-    .pulse-indicator {
-      width: 10px;
-      height: 10px;
-      background: #22c55e;
-      border-radius: 50%;
-      box-shadow: 0 0 8px #22c55e;
-    }
-    .triage-grid {
-      display: grid;
-      grid-template-columns: 1fr;
-      gap: 1.25rem;
-      padding: 1rem;
-      flex: 1;
-    }
-    @media (min-width: 900px) {
-      .triage-grid {
-        grid-template-columns: 1fr 1.1fr;
-        padding: 1.5rem;
-      }
-    }
-    .terminal-panel {
-      background: #ffffff;
-      border-radius: 16px;
-      border: 1px solid #e2e8f0;
-      padding: 1.25rem;
-      display: flex;
-      flex-direction: column;
-      gap: 1rem;
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
-    }
-    .panel-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    .badge {
-      background: #e0f2fe;
-      color: #0369a1;
-      font-size: 0.75rem;
-      font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 12px;
-    }
-    .staff-badge {
-      background: #fef3c7;
-      color: #b45309;
-    }
-    .video-wrapper {
-      position: relative;
-      width: 100%;
-      height: 280px;
-      background: #000000;
-      border-radius: 12px;
-      overflow: hidden;
-    }
-    #webcam {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      transform: scaleX(-1);
-    }
-    #output-canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      transform: scaleX(-1);
-    }
-    .detection-pill {
-      position: absolute;
-      bottom: 12px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: rgba(15, 23, 42, 0.85);
-      color: #38bdf8;
-      padding: 6px 16px;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: 700;
-      white-space: nowrap;
-      transition: all 0.2s ease;
-    }
-    .patient-visual-feedback {
-      background: #f8fafc;
-      border: 1.5px dashed #cbd5e1;
-      border-radius: 12px;
-      padding: 1rem;
-      flex: 1;
-    }
-    .visual-sign-card {
-      margin-top: 0.5rem;
-      background: #ffffff;
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 1rem;
-      text-align: center;
-      min-height: 110px;
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-    }
-    .card {
-      background: #f8fafc;
-      border: 1px solid #e2e8f0;
-      border-radius: 12px;
-      padding: 1rem;
-    }
-    .card h4 {
-      font-size: 0.85rem;
-      color: #475569;
-      text-transform: uppercase;
-      margin-bottom: 0.65rem;
-    }
-    .symptoms-bucket {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      min-height: 48px;
-      align-items: center;
-    }
-    .symptom-tag {
-      background: #fee2e2;
-      color: #991b1b;
-      border: 1px solid #fecaca;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-weight: 700;
-      font-size: 0.85rem;
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-    .prompt-chips {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.5rem;
-      margin-bottom: 0.75rem;
-    }
-    .prompt-chips button {
-      background: #ffffff;
-      border: 1px solid #cbd5e1;
-      padding: 8px 12px;
-      border-radius: 8px;
-      font-size: 0.8rem;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    .prompt-chips button:hover {
-      background: #e2e8f0;
-    }
-    .speech-input-box {
-      display: flex;
-      gap: 0.5rem;
-    }
-    .speech-input-box input {
-      flex: 1;
-      padding: 0.65rem 0.85rem;
-      border: 1px solid #cbd5e1;
-      border-radius: 8px;
-      font-size: 0.9rem;
-    }
-    .speech-input-box button {
-      background: #0284c7;
-      color: white;
-      border: none;
-      padding: 0 1.25rem;
-      border-radius: 8px;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    .generate-btn {
-      width: 100%;
-      background: #16a34a;
-      color: white;
-      border: none;
-      padding: 0.85rem;
-      border-radius: 10px;
-      font-size: 1rem;
-      font-weight: 700;
-      cursor: pointer;
-    }
-    .ticket-container {
-      background: #ffffff;
-      border: 3px solid #0f172a;
-      padding: 1.5rem;
-      border-radius: 8px;
-      margin-top: 1rem;
-    }
-    .ticket-header {
-      border-bottom: 2px solid #0f172a;
-      padding-bottom: 0.75rem;
-      margin-bottom: 1rem;
-      display: flex;
-      justify-content: space-between;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SignLingo Pro - Indian Sign Language Studio & Clinical Triage</title>
+<link rel="stylesheet" href="pr.css">
+<!-- FontAwesome Icons --> 
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"> 
+<!-- Client-Side PDF Generation Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<!-- Canvas Confetti for Drills Celebration -->
+<script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+<!-- MediaPipe Hands & Drawing Utils via jsDelivr CDN -->
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
 </head>
 <body>
-  <header>
-    <div class="logo">
-      <i class="fa-solid fa-hospital-user"></i>
-      <h2>SignLingo <span>TriageHub</span></h2>
+<!-- User Login / Sign Up Modal -->
+<div id="auth-modal" class="auth-modal-overlay" role="dialog" aria-modal="true" aria-labelledby="auth-subtitle">
+<div class="auth-card">
+<div class="brand-title" style="justify-content: center; margin-bottom: 0.5rem;">
+<span class="flag-icon">🇮🇳</span>
+<h2 id="auth-brand-title">SignLingo ISL</h2>
+</div>
+<p id="auth-subtitle" style="text-align: center; font-size: 0.85rem; color: #718096; margin-bottom: 1.25rem;">Login to save your modules & earn certificates</p>
+<div class="auth-tab-buttons">
+<button class="auth-tab active" id="tab-login-btn" onclick="toggleAuthMode('login')">Sign In</button>
+<button class="auth-tab" id="tab-signup-btn" onclick="toggleAuthMode('signup')">Sign Up</button>
+</div>
+<form id="auth-form" onsubmit="handleAuthSubmit(event)">
+<div id="signup-extra-fields" style="display: none;">
+<label class="auth-label" id="auth-label-name" for="auth-name">Full Name</label>
+<input type="text" id="auth-name" class="auth-input" placeholder="e.g. Aditi Sharma"></div>
+<label class="auth-label" id="auth-label-email" for="auth-email">Email Address</label>
+<input type="email" id="auth-email" class="auth-input" placeholder="name@example.com" required>
+<label class="auth-label" id="auth-label-password" for="auth-password">Password</label>
+<input type="password" id="auth-password" class="auth-input" placeholder="••••••••" required>
+<div id="auth-error-msg" class="auth-error"></div>
+<button type="submit" id="auth-submit-btn" class="auth-btn">Sign In</button>
+</form>
+</div>
+</div>
+
+<!-- Header -->
+<header>
+<div class="header-top">
+<div class="brand-title">
+<span class="flag-icon">🇮🇳</span>
+<h2 id="header-brand-title">SignLingo ISL</h2>
+</div>
+<!-- Accessibility, Language & User Controls -->
+<div class="accessibility-controls">
+<div id="user-badge" class="user-pill" onclick="logoutUser()" title="Click to Logout">
+<i class="fa-solid fa-user-circle"></i> <span id="header-user-name">Guest</span>
+</div>
+<select id="language-select" onchange="changeLanguage(this.value)" title="Change Language" style="padding: 0.2rem 0.4rem; border-radius: 8px; border: 1px solid #cbd5e0; font-size: 0.8rem; background: #edf2f7; cursor: pointer;">
+<option value="en">English</option>
+<option value="hi">हिन्दी</option>
+<option value="mr">मराठी</option>
+</select>
+<button class="access-toggle-btn" onclick="toggleDarkMode()" title="Toggle Dark Mode">🌙</button>
+<button class="access-toggle-btn" onclick="adjustFontSize(1)" title="Increase Font Size">A+</button>
+<button class="access-toggle-btn" onclick="adjustFontSize(-1)" title="Decrease Font Size">A-</button>
+</div>
+</div>
+<p class="studio-subtitle" id="header-studio-subtitle">INDIAN SIGN LANGUAGE STUDIO</p>
+</header>
+
+<main class="container">
+<!-- Navigation Dashboard -->
+<section id="dashboard" class="view active">
+<div class="top-nav-tabs">
+<button class="tab-btn" id="nav-triage-btn" onclick="switchView('triage-terminal-view'); startTriageCamera();">🏥 Dual Triage Terminal</button>
+<button class="tab-btn active" id="nav-modules-btn" onclick="switchView('dashboard')">📖 Modules</button> 
+<button class="tab-btn" id="nav-camera-btn" onclick="switchView('ai-practice-view'); startCamera();">🤖 Hand Studio</button>
+<button class="tab-btn" id="nav-drill-btn" onclick="switchView('drill-view')">🎮 Clinical Drills</button>
+<button class="tab-btn" id="nav-game-btn" onclick="switchView('game-view'); initSpeedDrill();">⚡ Speed Challenge</button>
+<button class="tab-btn" id="nav-dict-btn" onclick="switchView('dictionary-view')">📚 Dictionary</button>
+<button class="tab-btn" id="nav-flash-btn" onclick="switchView('flashcard-view')">⚡ Flashcards</button>
+<button class="tab-btn" onclick="handleExamClick()" id="nav-exam-btn">📝 Final Exam</button>
+<button class="tab-btn" onclick="handleCertificateClick()" id="nav-cert-btn">🏆 Certificate</button>
+<button class="tab-btn" id="nav-verify-btn" onclick="switchView('verify-view')">🔍 Verify</button>
+</div>
+<div class="hero-card">
+<span class="badge-tag" id="hero-badge-tag">ISL CURRICULUM</span>
+<h2 id="hero-title-text">Interactive ISL Studio & Clinical Triage</h2>
+<p id="hero-desc-text">Master Indian Sign Language with structured modules, real-time two-hand AI gesture tracking, verified certificates, and bi-directional emergency triage.</p>
+<div class="progress-bar-container" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100">
+<div id="main-progress-fill" class="progress-fill" style="width: 0%;"></div>
+</div>
+<div class="progress-text"><span id="modules-completed-text">0 of 3 Modules passed</span> <span id="highlight-prog" class="highlight-prog">0% Progress</span></div>
+</div>
+
+<!-- Feature Shortcuts Grid -->
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.75rem; margin-bottom: 1rem;">
+<div class="module-card" onclick="switchView('triage-terminal-view'); startTriageCamera();" style="padding: 0.85rem; border-left: 4px solid #dc2626;">
+<div class="icon-box orange-box" style="width: 40px; height: 40px; font-size: 1rem;"><i class="fa-solid fa-hospital"></i></div>
+<div class="module-info"><h4 style="font-size: 0.85rem; color: #dc2626;">Dual Triage Terminal</h4>
+<p style="font-size: 0.7rem;">Bi-directional patient & staff interpreter</p>
+</div>
+</div>
+<div class="module-card" onclick="switchView('ai-practice-view'); startCamera();" style="padding: 0.85rem;">
+<div class="icon-box purple-box" style="width: 40px; height: 40px; font-size: 1rem;"><i class="fa-solid fa-robot"></i></div>
+<div class="module-info"><h4 id="shortcut-ai-title" style="font-size: 0.85rem;">Two-Hand AI Motion Studio</h4>
+<p id="shortcut-ai-desc" style="font-size: 0.7rem;">Live kinetic tracking & temporal trajectory analysis</p>
+</div>
+</div>
+<div class="module-card" onclick="switchView('game-view'); initSpeedDrill();" style="padding: 0.85rem;">
+<div class="icon-box gold-box" style="width: 40px; height: 40px; font-size: 1rem;"><i class="fa-solid fa-stopwatch"></i></div>
+<div class="module-info">
+<h4 id="shortcut-game-title" style="font-size: 0.85rem;">Beat-the-Clock Speed Drill</h4>
+<p id="shortcut-game-desc" style="font-size: 0.7rem;">60-second rapid emergency sign recognition</p>
+</div> </div>
+<div class="module-card" onclick="switchView('drill-view')" style="padding: 0.85rem;">
+<div class="icon-box orange-box" style="width: 40px; height: 40px; font-size: 1rem;"><i class="fa-solid fa-hospital-user"></i></div>
+<div class="module-info">
+<h4 id="shortcut-drill-title" style="font-size: 0.85rem;">Clinical Scenario Simulation</h4>
+<p id="shortcut-drill-desc" style="font-size: 0.7rem;">Emergency triage patient diagnosis</p>
+</div> </div>
+<div class="module-card" onclick="switchView('flashcard-view')" style="padding: 0.85rem;">
+<div class="icon-box blue-box" style="width: 40px; height: 40px; font-size: 1rem;">⚡</div>
+<div class="module-info">
+<h4 id="shortcut-flash-title" style="font-size: 0.85rem;">Flashcards</h4>
+<p id="shortcut-flash-desc" style="font-size: 0.7rem;">Rapid memory retention deck</p>
+</div>
+</div>
+</div>
+
+<h3 class="section-heading" id="curriculum-heading-text">Curriculum Modules</h3>
+<div class="module-list">
+<div class="module-card" onclick="openModule('module1')">
+<div class="icon-box blue-box" id="mod1-badge">M 1</div>
+<div class="module-info">
+<h4 id="mod1-title">Module 1: Foundations & Theory</h4>
+<p id="mod1-desc">History, alphabets, basic greetings, and core ISL theory</p>
+</div>
+<div class="action-pill blue-pill start-btn-text" id="mod1-status-pill">Start →</div>
+</div>
+<div class="module-card" onclick="openModule('module2')">
+<div class="icon-box orange-box" id="mod2-badge">M 2</div><div class="module-info">
+<h4 id="mod2-title">Module 2: Situational Communication</h4>
+<p id="mod2-desc">Hospital, medical terminology, and emergency signs</p>
+</div>
+<div class="action-pill orange-pill start-btn-text" id="mod2-status-pill">Start →</div>
+</div>
+<div class="module-card" onclick="openModule('module3')">
+<div class="icon-box purple-box" id="mod3-badge">M 3</div>
+<div class="module-info">
+<h4 id="mod3-title">Module 3: Advanced Sentences & Numbers</h4>
+<p id="mod3-desc">Advanced sentences, numerical structures, and video tutorials</p>
+</div>
+<div class="action-pill purple-pill start-btn-text" id="mod3-status-pill">Start →</div>
+</div>
+</div>
+<div class="exam-shortcut-card" onclick="handleExamClick()" id="exam-dashboard-card">
+<div class="icon-box gold-box">🏆</div>
+<div class="module-info">
+<h4 id="exam-card-title">Final Cryptographic Examination & Certification</h4>
+<p id="exam-card-status-desc">Complete all 3 Module Clinical Tests to unlock the final certification exam</p>
+</div>
+<div class="action-pill gold-pill" id="exam-card-btn">Locked 🔒</div>
+</div>
+</section>
+
+<!-- ======================================================== -->
+<!-- ADDON: BI-DIRECTIONAL MULTILINGUAL CLINICAL TRIAGE KIOSK -->
+<!-- ======================================================== -->
+<section id="triage-terminal-view" class="view">
+  <button class="back-btn back-to-dash-btn" onclick="stopTriageCamera(); switchView('dashboard');">← Back to Dashboard</button>
+
+  <div class="triage-header-bar">
+    <div>
+      <h2 style="font-size: 1.3rem; color: #1e3a8a; margin: 0;">🏥 Dual-Terminal Clinical Kiosk</h2>
+      <p style="font-size: 0.85rem; color: #64748b; margin: 0;">Bi-Directional ISL Interpretation, Continuous Sentence Formulation & Emergency Triage</p>
     </div>
-    <div class="header-status">
-      <span class="pulse-indicator"></span> Bi-Directional Terminal Active
+    <div style="display: flex; gap: 0.5rem; align-items: center;">
+      <label for="triage-lang-select" style="font-weight: 700; font-size: 0.85rem; color: #334155;">Language:</label>
+      <select id="triage-lang-select" onchange="changeTriageLanguage(this.value)" style="padding: 0.35rem 0.6rem; border-radius: 8px; font-weight: 600;">
+        <option value="en">English</option>
+        <option value="hi">हिन्दी (Hindi)</option>
+        <option value="mr" selected>मराठी (Marathi)</option>
+      </select>
     </div>
-  </header>
+  </div>
 
-  <main class="triage-grid">
-    <!-- TERMINAL A: PATIENT INTERACTION (Side A) -->
-    <section class="terminal-panel">
-      <div class="panel-header">
-        <h3><i class="fa-solid fa-camera"></i> Patient Input Terminal (ISL Vision)</h3>
-        <span class="badge">Side A (Patient)</span>
+  <div class="triage-grid-container">
+    <!-- SIDE A: PATIENT INTERFACE -->
+    <div class="card triage-card patient-terminal">
+      <div class="terminal-banner patient-banner">
+        <span><i class="fa-solid fa-hospital-user"></i> <strong>TERMINAL A: PATIENT (ISL RECEPTION)</strong></span>
+        <span class="pulse-indicator">● LIVE CAMERA</span>
       </div>
 
-      <div class="video-wrapper">
-        <video id="webcam" playsinline webkit-playsinline muted autoplay style="display: block; width: 100%; height: 100%; object-fit: cover;"></video>
-
-        <canvas id="output-canvas"></canvas>
-        <div id="detection-pill" class="detection-pill">Observing Gestures...</div>
+      <div class="video-feed-wrapper" style="width: 100%; height: 320px; margin-top: 0.75rem;">
+        <video id="triage-webcam-input" playsinline muted autoplay></video>
+        <canvas id="triage-camera-canvas"></canvas>
       </div>
 
-      <!-- Reverse Visual Sign Feedback (Staff to Patient) -->
-      <div class="patient-visual-feedback">
-        <h4>Staff Directions to Patient / डॉक्टरांचे निर्देश:</h4>
-        <div id="visual-sign-card" class="visual-sign-card">
-          <p style="color:#94a3b8; font-size:0.9rem;">Staff prompts appear here as signs & visual icons.</p>
-        </div>
-      </div>
-    </section>
+      <div class="detected-sign-pill" id="triage-active-gesture">Waiting for ISL Gestures...</div>
 
-    <!-- TERMINAL B: CLINICAL STAFF CONSOLE (Side B) -->
-    <section class="terminal-panel">
-      <div class="panel-header">
-        <h3><i class="fa-solid fa-user-doctor"></i> Healthcare Staff Console</h3>
-        <span class="badge staff-badge">Side B (Triage Staff)</span>
-      </div>
-
-      <!-- Real-Time Decoded Symptoms Feed -->
-      <div class="card">
-        <h4>Auto-Decoded Symptoms (from Patient ISL Gestures)</h4>
-        <div id="symptoms-bucket" class="symptoms-bucket">
-          <span class="empty-hint" style="color:#94a3b8; font-size:0.85rem;">No symptoms registered yet. Hold hand gesture in front of camera.</span>
+      <!-- REVERSE SIGN INTERPRETATION (STAFF -> PATIENT) -->
+      <div class="patient-playback-box">
+        <h4 style="font-size: 0.85rem; color: #1e3a8a; margin-bottom: 0.4rem;">
+          <i class="fa-solid fa-hands-asl-interpreting"></i> Medical Staff Visual Response:
+        </h4>
+        <div id="patient-sign-playback" class="sign-playback-scroll">
+          <p style="font-size: 0.8rem; color: #94a3b8; margin: auto;">Staff response signs will display here in real-time.</p>
         </div>
       </div>
 
-      <!-- Staff Prompts to Patient -->
-      <div class="card">
-        <h4>Communicate with Patient (Sends Signs to Patient Screen)</h4>
-        <div class="prompt-chips">
-          <button onclick="dispatchToPatient('Doctor')">Doctor Coming / डॉक्टर येत आहेत</button>
-          <button onclick="dispatchToPatient('Wait')">Please Wait / कृपया थांबा</button>
-          <button onclick="dispatchToPatient('Hospital')">Hospital Admission / भरती प्रक्रिया</button>
-          <button onclick="dispatchToPatient('Water')">Drink Water / पाणी प्या</button>
+      <!-- WONG-BAKER VISUAL ANALOGUE PAIN SCALE (VAS) -->
+      <div class="pain-scale-container" id="pain-scale-box">
+        <label style="font-size: 0.8rem; font-weight: 700; color: #475569; display: block; margin-bottom: 0.3rem;">
+          Rate Pain Severity (Visual Analogue Scale):
+        </label>
+        <div class="pain-scale-slider">
+          <button type="button" class="pain-level-btn" onclick="selectPainLevel(0)">😊 0</button>
+          <button type="button" class="pain-level-btn" onclick="selectPainLevel(2)">🙂 2</button>
+          <button type="button" class="pain-level-btn" onclick="selectPainLevel(4)">😐 4</button>
+          <button type="button" class="pain-level-btn" onclick="selectPainLevel(6)">🙁 6</button>
+          <button type="button" class="pain-level-btn" onclick="selectPainLevel(8)">😣 8</button>
+          <button type="button" class="pain-level-btn" onclick="selectPainLevel(10)">😭 10</button>
         </div>
-        <div class="speech-input-box">
-          <input type="text" id="nurse-custom-text" placeholder="Type custom instruction or direction...">
-          <button onclick="sendCustomStaffText()"><i class="fa-solid fa-paper-plane"></i> Send</button>
+        <span id="selected-pain-score" style="font-size: 0.75rem; color: #2563eb; font-weight: 700;">Recorded Pain: None (0/10)</span>
+      </div>
+    </div>
+
+    <!-- SIDE B: MEDICAL STAFF CONSOLE -->
+    <div class="card triage-card staff-terminal">
+      <div class="terminal-banner staff-banner">
+        <span><i class="fa-solid fa-user-doctor"></i> <strong>TERMINAL B: STAFF (CLINICAL CONSOLE)</strong></span>
+        <div style="display: flex; gap: 0.4rem;">
+          <button class="icon-toggle-btn" onclick="toggleTriageTTS()" id="triage-tts-toggle" title="Toggle Audio Speech Synthesis">🔊 Speech ON</button>
         </div>
       </div>
 
-      <!-- Action Panel: Generate Triage Summary -->
-      <div class="card">
-        <button class="generate-btn" onclick="commitTriageIntake()">
-          <i class="fa-solid fa-file-medical"></i> Finalize & Generate Triage Ticket
+      <!-- LIVE DECODED SENTENCE & EMERGENCY ALERTS -->
+      <div class="clinical-box" style="margin-top: 0.75rem;">
+        <span class="sub-label">CONTINUOUS PATIENT NARRATIVE:</span>
+        <p id="triage-live-sentence" class="live-sentence-stream">Awaiting patient communication...</p>
+        <div id="clinical-symptom-tags" class="symptom-tag-cloud"></div>
+      </div>
+
+      <!-- VITALS & COMORBIDITIES ENTRY -->
+      <div class="vitals-entry-grid">
+        <div>
+          <label class="vitals-label">Pulse (BPM)</label>
+          <input type="number" id="vital-pulse" class="vitals-input" placeholder="78">
+        </div>
+        <div>
+          <label class="vitals-label">SpO2 (%)</label>
+          <input type="number" id="vital-spo2" class="vitals-input" placeholder="98">
+        </div>
+        <div>
+          <label class="vitals-label">BP (mmHg)</label>
+          <input type="text" id="vital-bp" class="vitals-input" placeholder="120/80">
+        </div>
+      </div>
+
+      <div class="comorbidity-toggles">
+        <label class="comorbid-chip"><input type="checkbox" id="cm-diabetes"> Diabetes</label>
+        <label class="comorbid-chip"><input type="checkbox" id="cm-htn"> Hypertension</label>
+        <label class="comorbid-chip"><input type="checkbox" id="cm-cardiac"> Cardiac History</label>
+        <label class="comorbid-chip"><input type="checkbox" id="cm-pregnancy"> Pregnancy</label>
+      </div>
+
+      <!-- STAFF RESPONSE TOOLS (VOICE, PROMPTS, TEXT) -->
+      <div class="staff-reply-section">
+        <label class="sub-label">STAFF RESPONSE TO PATIENT (VOICE / TEXT TO ISL):</label>
+        <div style="display: flex; gap: 0.4rem; margin-bottom: 0.5rem;">
+          <input type="text" id="staff-reply-input" placeholder="Speak or type instructions (e.g. Doctor is coming, Sit down)..." style="flex: 1; padding: 0.5rem 0.75rem; border-radius: 8px; border: 1.5px solid #cbd5e1; font-size: 0.85rem;">
+          <button type="button" onclick="toggleStaffSpeechInput()" id="staff-mic-btn" style="margin-top: 0; background: #2563eb; padding: 0.5rem 0.9rem;" title="Voice to Sign"><i class="fa-solid fa-microphone"></i></button>
+          <button type="button" onclick="sendStaffReply()" style="margin-top: 0; background: #059669; padding: 0.5rem 1rem;">Translate →</button>
+        </div>
+
+        <div class="quick-chip-tray">
+          <button type="button" class="quick-reply-btn" onclick="triggerStaffQuickReply('Doctor coming, please sit.')">Doctor Coming</button>
+          <button type="button" class="quick-reply-btn" onclick="triggerStaffQuickReply('Drink water and rest.')">Drink Water</button>
+          <button type="button" class="quick-reply-btn" onclick="triggerStaffQuickReply('Need blood pressure check.')">Take BP</button>
+          <button type="button" class="quick-reply-btn" onclick="triggerStaffQuickReply('Medicine after food.')">Take Medicine</button>
+        </div>
+      </div>
+
+      <!-- TICKET GENERATOR BUTTON -->
+      <div style="display: flex; gap: 0.5rem; margin-top: 1rem;">
+        <button type="button" onclick="generateTriageTicketPDF()" style="flex: 1; background: #dc2626; color: white; margin-top: 0; padding: 0.65rem 1rem; border-radius: 10px; font-weight: 700; font-size: 0.9rem;">
+          <i class="fa-solid fa-file-pdf"></i> Generate Emergency Triage Intake Ticket
         </button>
       </div>
+    </div>
+  </div>
 
-      <!-- PDF-Ready Triage Ticket Output -->
-      <div id="triage-ticket-output" style="display: none;"></div>
-    </section>
-  </main>
+  <!-- HIDDEN CONTAINER FOR PDF INTAKE TICKET -->
+  <div id="printable-triage-ticket" style="display: none;"></div>
+</section>
 
-  <script>
-    let currentSymptoms = new Set();
-    let lastDetectedGesture = null;
-    let holdCount = 0;
-
-    const signVisuals = {
-      "Doctor": {
-        title: "DOCTOR / डॉक्टर",
-        instruction: "Tapping pulse point on wrist twice.",
-        svg: `<svg width="70" height="70" viewBox="0 0 120 120"><rect x="15" y="65" width="85" height="28" rx="8" fill="#e2e8f0" stroke="#718096" stroke-width="2"/><circle cx="45" cy="79" r="6" fill="#feb2b2" stroke="#e53e3e" stroke-width="1.5"/><path d="M 40 20 L 40 70 M 50 20 L 50 70 M 58 45 L 68 55" stroke="#2b6cb0" stroke-width="6" stroke-linecap="round"/></svg>`
-      },
-      "Hospital": {
-        title: "HOSPITAL ADMISSION / रुग्णालय",
-        instruction: "Draw cross on upper shoulder/arm.",
-        svg: `<svg width="70" height="70" viewBox="0 0 120 120"><path d="M 25 30 Q 55 15 95 30 L 85 95 Q 55 105 25 95 Z" fill="#ebf8ff" stroke="#3182ce" stroke-width="2"/><line x1="60" y1="35" x2="60" y2="85" stroke="#e53e3e" stroke-width="6" stroke-linecap="round"/><line x1="38" y1="58" x2="82" y2="58" stroke="#e53e3e" stroke-width="6" stroke-linecap="round"/></svg>`
-      },
-      "Wait": {
-        title: "PLEASE WAIT / कृपया थांबा",
-        instruction: "Flat open hand held forward calmly.",
-        svg: `<svg width="70" height="70" viewBox="0 0 120 120"><circle cx="60" cy="60" r="45" fill="#fef3c7" stroke="#d97706" stroke-width="3"/><path d="M 60 30 L 60 65 L 85 65" stroke="#d97706" stroke-width="6" stroke-linecap="round"/></svg>`
-      },
-      "Water": {
-        title: "DRINK WATER / पाणी",
-        instruction: "Form 'W' handshape near chin.",
-        svg: `<svg width="70" height="70" viewBox="0 0 120 120"><line x1="45" y1="75" x2="40" y2="25" stroke="#3182ce" stroke-width="5" stroke-linecap="round"/><line x1="55" y1="75" x2="55" y2="20" stroke="#3182ce" stroke-width="5" stroke-linecap="round"/><line x1="65" y1="75" x2="70" y2="25" stroke="#3182ce" stroke-width="5" stroke-linecap="round"/></svg>`
-      }
-    };
-
-    function dist(p1, p2) {
-      return Math.sqrt(Math.pow(p1.x - p2.x, 2) + Math.pow(p1.y - p2.y, 2));
-    }
-
-    function classifyTriageSign(landmarks) {
-      if (!landmarks || landmarks.length === 0) return null;
-      const hand = landmarks[0];
-      const wrist = hand[0];
-
-      const isIndexExt = dist(hand[8], wrist) > dist(hand[6], wrist) * 1.15;
-      const isMiddleExt = dist(hand[12], wrist) > dist(hand[10], wrist) * 1.15;
-      const isRingExt = dist(hand[16], wrist) > dist(hand[14], wrist) * 1.15;
-      const isPinkyExt = dist(hand[20], wrist) > dist(hand[18], wrist) * 1.15;
-
-      // Closed Fist: Acute Chest Distress / Heart Attack
-      if (!isIndexExt && !isMiddleExt && !isRingExt && !isPinkyExt) {
-        return "Heart Attack / Acute Chest Distress";
-      }
-      // Open Palm: High Fever / Headache Check
-      if (isIndexExt && isMiddleExt && isRingExt && isPinkyExt) {
-        return "High Fever / Elevated Temperature";
-      }
-      // Single Index pointing: Localized Pain
-      if (isIndexExt && !isMiddleExt && !isRingExt && !isPinkyExt) {
-        return "Severe Abdominal Pain";
-      }
-      return null;
-    }
-
-    const videoElement = document.getElementById("webcam");
-    const canvasElement = document.getElementById("output-canvas");
-    const canvasCtx = canvasElement.getContext("2d");
-    const detectionPill = document.getElementById("detection-pill");
-
-    const hands = new Hands({
-      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`
-    });
-
-    hands.setOptions({
-      maxNumHands: 2,
-      modelComplexity: 1,
-      minDetectionConfidence: 0.55,
-      minTrackingConfidence: 0.55
-    });
-
-    hands.onResults((results) => {
-      canvasCtx.save();
-      canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-      canvasElement.width = videoElement.videoWidth || 480;
-      canvasElement.height = videoElement.videoHeight || 360;
-
-      if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
-        for (const lms of results.multiHandLandmarks) {
-          drawConnectors(canvasCtx, lms, HAND_CONNECTIONS, { color: '#38bdf8', lineWidth: 3 });
-          drawLandmarks(canvasCtx, lms, { color: '#ef4444', lineWidth: 1, radius: 4 });
-        }
-
-        const detected = classifyTriageSign(results.multiHandLandmarks);
-        if (detected) {
-          if (detected === lastDetectedGesture) {
-            holdCount++;
-            if (holdCount > 10) {
-              registerSymptom(detected);
-              detectionPill.innerText = `Detected: ${detected}`;
-              detectionPill.style.background = "#15803d";
-            }
-          } else {
-            lastDetectedGesture = detected;
-            holdCount = 0;
-          }
-        }
-      } else {
-        detectionPill.innerText = "Observing Gestures...";
-        detectionPill.style.background = "rgba(15, 23, 42, 0.85)";
-      }
-      canvasCtx.restore();
-    });
-
-    const camera = new Camera(videoElement, {
-      onFrame: async () => {
-        await hands.send({ image: videoElement });
-      },
-      width: 480,
-      height: 360
-    });
-    camera.start();
-
-    function registerSymptom(symptom) {
-      if (currentSymptoms.has(symptom)) return;
-      currentSymptoms.add(symptom);
-
-      const bucket = document.getElementById("symptoms-bucket");
-      const emptyHint = bucket.querySelector(".empty-hint");
-      if (emptyHint) emptyHint.remove();
-
-      const tag = document.createElement("div");
-      tag.className = "symptom-tag";
-      tag.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> ${symptom} <i class="fa-solid fa-xmark" style="cursor:pointer; margin-left:6px;" onclick="removeSymptom('${symptom}', this)"></i>`;
-      bucket.appendChild(tag);
-    }
-
-    function removeSymptom(symptom, el) {
-      currentSymptoms.delete(symptom);
-      el.parentElement.remove();
-    }
-
-    function dispatchToPatient(wordKey) {
-      const area = document.getElementById("visual-sign-card");
-      const sign = signVisuals[wordKey];
-      if (sign) {
-        area.innerHTML = `
-          <div style="margin-bottom:6px;">${sign.svg}</div>
-          <h3 style="color:#0369a1; font-size:1.05rem;">${sign.title}</h3>
-          <p style="font-size:0.8rem; color:#475569;">${sign.instruction}</p>
-        `;
-      }
-    }
-
-    function sendCustomStaffText() {
-      const input = document.getElementById("nurse-custom-text");
-      const val = input.value.trim();
-      if (!val) return;
-      
-      const area = document.getElementById("visual-sign-card");
-      area.innerHTML = `
-        <h3 style="color:#0f172a; font-size:1.1rem; margin-bottom: 4px;">Staff Notice:</h3>
-        <p style="font-size:1.05rem; color:#0284c7; font-weight:700;">"${val}"</p>
-      `;
-      input.value = "";
-    }
-
-    function commitTriageIntake() {
-      if (currentSymptoms.size === 0) {
-        alert("Hold your hand in front of the camera to detect a symptom before generating a ticket.");
-        return;
-      }
-
-      const intakeId = "TRG-" + new Date().getFullYear() + "-" + Math.random().toString(36).substring(2, 7).toUpperCase();
-      const timeStr = new Date().toLocaleString();
-      let priority = "STANDARD (Green)";
-      if (currentSymptoms.has("Heart Attack / Acute Chest Distress")) {
-        priority = "EMERGENCY (Red)";
-      } else if (currentSymptoms.has("High Fever / Elevated Temperature") || currentSymptoms.has("Severe Abdominal Pain")) {
-        priority = "URGENT (Yellow)";
-      }
-
-      const container = document.getElementById("triage-ticket-output");
-      container.style.display = "block";
-      container.innerHTML = `
-        <div class="ticket-container" id="printable-ticket">
-          <div class="ticket-header">
-            <div>
-              <h2 style="font-size:1.25rem; color:#0f172a;">EMERGENCY TRIAGE INTAKE SUMMARY</h2>
-              <p style="font-size:0.8rem; color:#64748b;">Hospital Casualty Intake Record</p>
-            </div>
-            <div style="text-align:right;">
-              <strong>ID: ${intakeId}</strong><br>
-              <span style="font-size:0.75rem;">${timeStr}</span>
-            </div>
-          </div>
-          <p><strong>Priority Status:</strong> <span style="color:#b91c1c; font-weight:800;">${priority}</span></p>
-          <p style="margin-top:0.5rem;"><strong>Primary Chief Complaints (ISL Detected):</strong></p>
-          <ul style="margin: 0.5rem 0 1rem 1.5rem;">
-            ${Array.from(currentSymptoms).map(s => `<li>${s}</li>`).join('')}
-          </ul>
-          <p style="font-size:0.8rem; color:#64748b; border-top:1px solid #cbd5e1; padding-top:0.5rem;">
-            Generated via SignLingo TriageHub Assistive Terminal.
-          </p>
-        </div>
-        <button onclick="downloadTicketPDF()" style="margin-top:0.75rem; background:#0f172a; color:white; border:none; padding:8px 16px; border-radius:6px; cursor:pointer;">
-          <i class="fa-solid fa-download"></i> Save Ticket as PDF
-        </button>
-      `;
-      container.scrollIntoView({ behavior: 'smooth' });
-    }
-
-    function downloadTicketPDF() {
-      const element = document.getElementById("printable-ticket");
-      html2pdf().from(element).save("Triage_Ticket.pdf");
-    }
-  </script>
-</body>
-</html>
+<!-- Upgraded Two-Handed AI Hand Tracking Studio with Target Sign Selection -->
+<section id="ai-practice-view" class="view">
+<button class="back-btn back-to-dash-btn" onclick="stopCamera(); switchView('dashboard');">← Back to Dashboard</button>
+<h2 id="ai-view-title">🤖 Advanced Real-Time Two-Hand & Dynamic Motion Studio</h2>
+<p id="ai-view-desc" style="color: #718096; margin-bottom: 1rem; font-size: 0.9rem;">
+Select any sign from the dictionary to practice with live multi-parameter pose verification and kinetic motion tracking.
+</p>
+<!-- Sign Selector & Practice Mode Controller -->
+<div class="card" style="margin-bottom: 1rem; padding: 1rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between;">
+<div style="display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 260px;">
+<label style="font-weight: 700; font-size: 0.9rem; color: #4a5568;" for="ai-sign-selector">🎯 Target Sign:</label>
+<select id="ai-sign-selector" onchange="changeAiTargetSign(this.value)" style="flex: 1; padding: 0.5rem; border-radius: 8px; border: 1.5px solid #cbd5e0; font-weight: 600; font-size: 0.9rem;">
+<!-- Dynamically populated from complete dictionary -->
+</select>
+</div>
+<div style="display: flex; gap: 0.5rem;">
+<button onclick="pickRandomAiTarget()" style="padding: 0.5rem 1rem; background: #6366f1; color: white; border-radius: 8px; font-size: 0.85rem; margin-top: 0;">🎲 Random Sign</button>
+<button onclick="startCamera()" class="cam-btn" id="cam-restart-btn" style="margin-top: 0; padding: 0.5rem 1rem;"><i class="fa-solid fa-play"></i> Restart Mirror</button>
+<button onclick="stopCamera()" class="cam-btn stop" id="cam-pause-btn" style="margin-top: 0; padding: 0.5rem 1rem;"><i class="fa-solid fa-stop"></i> Pause</button>
+</div>
+</div>
+<!-- Target Instruction & Real-Time Feedback Panel -->
+<div class="card" style="margin-bottom: 1rem; padding: 1rem; background: #ebf8ff; border-left: 4px solid #3182ce;">
+<div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
+<div>
+<span id="ai-target-cat-badge" style="font-size: 0.7rem; font-weight: 700; color: #2b6cb0; text-transform: uppercase;">Medical Vocabulary</span>
+<h3 id="ai-target-word-title" style="margin: 0.2rem 0; color: #1a365d;">Doctor</h3>
+</div>
+<div style="text-align: right;">
+<span style="font-size: 0.75rem; color: #4a5568;">Pose Match Score</span>
+<div id="ai-match-score-text" style="font
