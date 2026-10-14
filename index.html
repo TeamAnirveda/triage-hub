@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SignLingo Pro - Indian Sign Language Studio & Clinical Triage</title>
-<link rel="stylesheet" href="pr.css">
+<link rel="stylesheet" href="style.css">
 <!-- FontAwesome Icons --> 
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css"> 
 <!-- Client-Side PDF Generation Library -->
@@ -326,4 +326,336 @@ Select any sign from the dictionary to practice with live multi-parameter pose v
 </div>
 <div style="text-align: right;">
 <span style="font-size: 0.75rem; color: #4a5568;">Pose Match Score</span>
-<div id="ai-match-score-text" style="font
+<div id="ai-match-score-text" style="font-size: 1.25rem; font-weight: 800; color: #3182ce;">0%</div>
+</div>
+</div>
+<p id="ai-target-instruction-text" style="font-size: 0.85rem; color: #2d3748; margin-top: 0.4rem;">
+<strong>Instructions:</strong> Tapping two fingers of dominant hand against the inner wrist (pulse point).
+</p>
+<div class="progress-bar-container" style="margin-top: 0.5rem; height: 6px; background: #cbd5e1;">
+<div id="ai-score-bar-fill" class="progress-fill" style="width: 0%; background: #3182ce;"></div>
+</div>
+</div>
+<div class="card camera-container">
+<div class="video-feed-wrapper">
+<video id="webcam-input" playsinline muted autoplay></video>
+<canvas id="camera-output-canvas"></canvas>
+</div>
+<div class="ai-status-panel">
+<div id="ai-feedback-badge" class="feedback-neutral">Searching for hand gestures & motion...</div>
+<div id="ai-detected-details" style="font-size: 0.9rem; color: #4a5568; margin-bottom: 0.75rem;">
+Align your hand(s) clearly in the camera frame to begin gesture verification.
+</div>
+</div>
+</div>
+</section>
+
+<!-- Interactive Clinical Scenario Drill View -->
+<section id="drill-view" class="view">
+<button class="back-btn back-to-dash-btn" onclick="switchView('dashboard')">← Back to Dashboard</button>
+<h2 id="drill-view-title">🎮 Clinical Emergency Simulation Drills</h2>
+<p id="drill-view-desc" style="color: #718096; margin-bottom: 1.25rem; font-size: 0.9rem;">
+Practice rapid situational diagnosis: evaluate simulated patient signs and prescribe the correct emergency response.
+</p>
+<div class="card" id="clinical-sim-container"></div>
+</section>
+
+<!-- Beat the Clock Speed Drill View -->
+<section id="game-view" class="view">
+<button class="back-btn back-to-dash-btn" onclick="stopSpeedDrill(); switchView('dashboard');">← Back to Dashboard</button>
+<h2 id="game-view-title">⚡ "Beat-the-Clock" Sign Identification Challenge</h2>
+<p id="game-view-desc" style="color: #718096; margin-bottom: 1rem; font-size: 0.9rem;">Identify as many emergency and hospital ISL signs as you can before the 60-second timer expires! (20 Comprehensive Signs)</p>
+<div class="card speed-drill-card">
+<div class="drill-stats-bar">
+<div class="stat-pill"><i class="fa-solid fa-clock"></i> <span id="game-time-label">Time:</span> <span id="drill-timer">60</span>s</div> 
+<div class="stat-pill"><i class="fa-solid fa-star"></i> <span id="game-score-label">Score:</span> <span id="drill-score">0</span></div> 
+<div class="stat-pill"><i class="fa-solid fa-trophy"></i> <span id="game-high-label">High Score:</span> <span id="drill-high-score">0</span></div>
+</div>
+<div id="drill-active-box" style="margin-top: 1.5rem; text-align: center;">
+<div id="drill-svg-container" style="min-height: 120px; display: flex; align-items: center; justify-content: center; margin-bottom: 1rem;"></div>
+<p id="drill-question-prompt" style="font-weight: 700; color: #4a5568; margin-bottom: 1rem;">Which sign is represented above?</p>
+<div id="drill-options-grid" class="drill-options-grid"></div>
+</div>
+<div id="drill-gameover-box" style="display: none; text-align: center; padding: 2rem 1rem;">
+<h3 id="drill-completed-title" style="color: #5a67d8; font-size: 1.5rem; margin-bottom: 0.5rem;">🎉 Drill Completed!</h3>
+<p id="drill-final-score-text" style="font-size: 1.1rem; color: #2d3748; margin-bottom: 1.5rem;"></p>
+<button onclick="startSpeedDrill()" id="drill-replay-btn" style="background: #38a169;"><i class="fa-solid fa-rotate-right"></i> Play Again</button>
+</div>
+</div>
+</section>
+
+<!-- Dictionary View with Direct AI Studio Practice Hook -->
+<section id="dictionary-view" class="view">
+<button class="back-btn back-to-dash-btn" onclick="switchView('dashboard')">← Back to Dashboard</button>
+<h2 id="dict-view-title">📚 ISL Quick-Reference Dictionary</h2>
+<p id="dict-view-desc" style="color: #718096; margin-bottom: 1.25rem; font-size: 0.9rem;">Search medical, emergency, and everyday vocabulary instantly, or practice any gesture directly in the AI Studio.</p>
+<div class="card" style="margin-bottom: 1rem;">
+<input type="text" id="dict-search-input" placeholder="Type a word (e.g. Doctor, Emergency, Thank you)..." oninput="filterDictionary()" style="width: 100%; padding: 0.75rem; border: 2px solid #cbd5e0; border-radius: 10px; font-size: 1rem;">
+</div>
+<div id="dictionary-results-container" style="display: flex; flex-direction: column; gap: 0.75rem;"></div>
+</section>
+
+<!-- Flashcards View -->
+<section id="flashcard-view" class="view">
+<button class="back-btn back-to-dash-btn" onclick="switchView('dashboard')">← Back to Dashboard</button>
+<h2 id="flash-view-title">⚡ Rapid Flashcard Retention Deck</h2>
+<p id="flash-view-desc" style="color: #718096; margin-bottom: 1.25rem; font-size: 0.9rem;">Flip through sign definitions to build long-term memory fluency.</p>
+<div class="card flashcard-interactive-box" onclick="flipFlashcard()">
+<span id="flashcard-category" style="font-size: 0.75rem; font-weight: 700; color: #3182ce; text-transform: uppercase; margin-bottom: 0.5rem;">Medical Vocabulary</span>
+<h3 id="flashcard-content" style="font-size: 1.3rem; color: #1a202c; margin-bottom: 1rem;">Tap to Reveal Sign Definition</h3>
+<p id="flashcard-click-hint" style="font-size: 0.8rem; color: #718096;">(Click card to flip)</p>
+</div>
+<div style="display: flex; gap: 1rem; margin-top: 1rem;">
+<button onclick="prevFlashcard()" id="flash-prev-btn" style="flex: 1; background: #e2e8f0; color: #4a5568;">← Previous</button>
+<button onclick="nextFlashcard()" id="flash-next-btn" style="flex: 1; background: #5a67d8;">Next Card →</button>
+</div>
+</section>
+
+<!-- Module 1 View -->
+<section id="module1" class="view">
+<button class="back-btn back-to-dash-btn" onclick="switchView('dashboard')">← Back to Dashboard</button>
+<h2 id="mod1-content-title">Module 1: Foundations & Theory</h2>
+<div class="theory-box">
+<h3 id="mod1-theory-heading">📖 ISL Core Theory & Background</h3>
+<p id="mod1-t1"><strong>1. Organizations & History:</strong> The Indian Sign Language Research and Training Centre (ISLRTC) in India focuses on research, development, and promotion of Indian Sign Language.</p>
+<p id="mod1-t2"><strong>2. Socio-Cultural Model:</strong> Defines deafness primarily as a linguistic and cultural identity rather than solely a medical pathology.</p>
+<p id="mod1-t3"><strong>3. Statutory Frameworks:</strong> The Rights of Persons with Disabilities (RPwD) Act, 2016 legally recognizes and protects the rights of persons with hearing impairment in India.</p>
+<p id="mod1-t4"><strong>4. Communication Etiquette:</strong> To get a Deaf person's attention, gently tap their shoulder or wave slightly in their field of vision.</p>
+<p id="mod1-t5"><strong>5. Linguistics:</strong> ISL relies on Subject-Object-Verb (SOV) structure, Handshape, Location, Movement, and Non-Manual Markers (NMMs).</p>
+</div>
+<div class="video-container">
+<div class="video-header-bar">
+<h3 id="mod1-v1-title">A-Z Alphabets Tutorial</h3>
+<label class="watch-check"><input type="checkbox" id="watch-m1-v1" onchange="checkModuleVideos(1)"> <span class="mark-watched-label">Mark Watched</span></label>
+</div>
+<iframe id="vid-frame-1" src="https://www.youtube.com/embed/qcdivQfA41Y?enablejsapi=1" allowfullscreen></iframe>
+<div class="video-player-controls">
+<button class="vid-ctrl-btn replay-10s-btn" onclick="replayTenSeconds('vid-frame-1')">⏪ Replay 10s</button>
+<button class="vid-ctrl-btn slow-mo-btn" onclick="toggleSlowMo('vid-frame-1', 0.5)">🐢 0.5x Slow-Mo</button>
+<button class="vid-ctrl-btn normal-speed-btn" onclick="toggleSlowMo('vid-frame-1', 1.0)">▶ 1.0x Normal</button>
+</div>
+</div>
+<div class="video-container">
+<div class="video-header-bar">
+<h3 id="mod1-v2-title">Basic 25 Words & Greetings</h3>
+<label class="watch-check"><input type="checkbox" id="watch-m1-v2" onchange="checkModuleVideos(1)"> <span class="mark-watched-label">Mark Watched</span></label>
+</div>
+<iframe id="vid-frame-2" src="https://www.youtube.com/embed/6_u9ocF60gs?enablejsapi=1" allowfullscreen></iframe>
+<div class="video-player-controls">
+<button class="vid-ctrl-btn replay-10s-btn" onclick="replayTenSeconds('vid-frame-2')">⏪ Replay 10s</button>
+<button class="vid-ctrl-btn slow-mo-btn" onclick="toggleSlowMo('vid-frame-2', 0.5)">🐢 0.5x Slow-Mo</button>
+<button class="vid-ctrl-btn normal-speed-btn" onclick="toggleSlowMo('vid-frame-2', 1.0)">▶ 1.0x Normal</button>
+</div>
+</div>
+<div class="video-container">
+<div class="video-header-bar">
+<h3 id="mod1-v3-title">Basic Daily Words</h3>
+<label class="watch-check"><input type="checkbox" id="watch-m1-v3" onchange="checkModuleVideos(1)"> <span class="mark-watched-label">Mark Watched</span></label>
+</div>
+<iframe id="vid-frame-3" src="https://www.youtube.com/embed/OK7ppVdau8M?enablejsapi=1" allowfullscreen></iframe>
+<div class="video-player-controls">
+<button class="vid-ctrl-btn replay-10s-btn" onclick="replayTenSeconds('vid-frame-3')">⏪ Replay 10s</button>
+<button class="vid-ctrl-btn slow-mo-btn" onclick="toggleSlowMo('vid-frame-2', 0.5)">🐢 0.5x Slow-Mo</button>
+<button class="vid-ctrl-btn normal-speed-btn" onclick="toggleSlowMo('vid-frame-3', 1.0)">▶ 1.0x Normal</button>
+</div>
+</div>
+<div id="mod1-lock-banner" class="lock-banner">
+<i class="fa-solid fa-lock"></i> <span id="mod1-lock-text">Watch all 3 episodes to unlock the Module 1 Clinical Scenario Test.</span>
+</div>
+<button class="next-btn" id="mod1-test-btn" onclick="startModuleTest(1)" disabled>Take Module 1 Clinical Scenario Test (10 Qs) →</button> 
+</section>
+
+<!-- Module 2 View -->
+<section id="module2" class="view">
+<button class="back-btn back-to-dash-btn" onclick="switchView('dashboard')">← Back to Dashboard</button>
+<h2 id="mod2-content-title">Module 2: Situational Communication (Hospital)</h2>
+<div class="video-container">
+<div class="video-header-bar">
+<h3 id="mod2-v1-title">Medical Terminology & Emergency Signs</h3>
+<label class="watch-check"><input type="checkbox" id="watch-m2-v1" onchange="checkModuleVideos(2)"> <span class="mark-watched-label">Mark Watched</span></label>
+</div>
+<iframe id="vid-frame-4" src="https://www.youtube.com/embed/eGu7iSk3dBo?enablejsapi=1" allowfullscreen></iframe>
+<div class="video-player-controls">
+<button class="vid-ctrl-btn replay-10s-btn" onclick="replayTenSeconds('vid-frame-4')">⏪ Replay 10s</button>
+<button class="vid-ctrl-btn slow-mo-btn" onclick="toggleSlowMo('vid-frame-4', 0.5)">🐢 0.5x Slow-Mo</button>
+<button class="vid-ctrl-btn normal-speed-btn" onclick="toggleSlowMo('vid-frame-4', 1.0)">▶ 1.0x Normal</button>
+</div>
+</div>
+<div class="video-container">
+<div class="video-header-bar">
+<h3 id="mod2-v2-title">Common Medical Terminology & Hospital Checkup</h3>
+<label class="watch-check"><input type="checkbox" id="watch-m2-v2" onchange="checkModuleVideos(2)"> <span class="mark-watched-label">Mark Watched</span></label>
+</div>
+<iframe id="vid-frame-5" src="https://www.youtube.com/embed/ebQgaOYaiJI?enablejsapi=1" allowfullscreen></iframe>
+<div class="video-player-controls">
+<button class="vid-ctrl-btn replay-10s-btn" onclick="replayTenSeconds('vid-frame-5')">⏪ Replay 10s</button>
+<button class="vid-ctrl-btn slow-mo-btn" onclick="toggleSlowMo('vid-frame-5', 0.5)">🐢 0.5x Slow-Mo</button>
+<button class="vid-ctrl-btn normal-speed-btn" onclick="toggleSlowMo('vid-frame-5', 1.0)">▶ 1.0x Normal</button>
+</div>
+</div>
+<div class="video-container">
+<div class="video-header-bar">
+<h3 id="mod2-v3-title">Illness and Disease Signs (Deaf Enabled Foundation)</h3>
+<label class="watch-check"><input type="checkbox" id="watch-m2-v3" onchange="checkModuleVideos(2)"> <span class="mark-watched-label">Mark Watched</span></label>
+</div>
+<iframe id="vid-frame-6" src="https://www.youtube.com/embed/nUnyS0ypFJ8?enablejsapi=1" allowfullscreen></iframe>
+<div class="video-player-controls">
+<button class="vid-ctrl-btn replay-10s-btn" onclick="replayTenSeconds('vid-frame-6')">⏪ Replay 10s</button>
+<button class="vid-ctrl-btn slow-mo-btn" onclick="toggleSlowMo('vid-frame-6', 0.5)">🐢 0.5x Slow-Mo</button>
+<button class="vid-ctrl-btn normal-speed-btn" onclick="toggleSlowMo('vid-frame-6', 1.0)">▶ 1.0x Normal</button>
+</div>
+</div>
+<div id="mod2-lock-banner" class="lock-banner">
+<i class="fa-solid fa-lock"></i> <span id="mod2-lock-text">Watch all 3 episodes to unlock the Module 2 Clinical Scenario Test.</span>
+</div>
+<button class="next-btn" id="mod2-test-btn" onclick="startModuleTest(2)" disabled>Take Module 2 Clinical Scenario Test (10 Qs) →</button> 
+</section>
+
+<!-- Module 3 View -->
+<section id="module3" class="view">
+<button class="back-btn back-to-dash-btn" onclick="switchView('dashboard')">← Back to Dashboard</button>
+<h2 id="mod3-content-title">Module 3: Advanced Sentences & Numbers</h2>
+<div class="video-container">
+<div class="video-header-bar">
+<h3 id="mod3-v1-title">Standard Signs & Advanced Vocabulary</h3>
+<label class="watch-check"><input type="checkbox" id="watch-m3-v1" onchange="checkModuleVideos(3)"> <span class="mark-watched-label">Mark Watched</span></label>
+</div>
+<iframe id="vid-frame-7" src="https://www.youtube.com/embed/-Eh3ktA52jw?enablejsapi=1" allowfullscreen></iframe>
+<div class="video-player-controls">
+<button class="vid-ctrl-btn replay-10s-btn" onclick="replayTenSeconds('vid-frame-7')">⏪ Replay 10s</button>
+<button class="vid-ctrl-btn slow-mo-btn" onclick="toggleSlowMo('vid-frame-7', 0.5)">🐢 0.5x Slow-Mo</button>
+<button class="vid-ctrl-btn normal-speed-btn" onclick="toggleSlowMo('vid-frame-7', 1.0)">▶ 1.0x Normal</button>
+</div>
+</div>
+<div class="video-container">
+<div class="video-header-bar">
+<h3 id="mod3-v2-title">Medical-Related Terminology & Law Contexts</h3>
+<label class="watch-check"><input type="checkbox" id="watch-m3-v2" onchange="checkModuleVideos(3)"> <span class="mark-watched-label">Mark Watched</span></label>
+</div>
+<iframe id="vid-frame-8" src="https://www.youtube.com/embed/HetzCj8XxKw?enablejsapi=1" allowfullscreen></iframe>
+<div class="video-player-controls">
+<button class="vid-ctrl-btn replay-10s-btn" onclick="replayTenSeconds('vid-frame-8')">⏪ Replay 10s</button>
+<button class="vid-ctrl-btn slow-mo-btn" onclick="toggleSlowMo('vid-frame-8', 0.5)">🐢 0.5x Slow-Mo</button>
+<button class="vid-ctrl-btn normal-speed-btn" onclick="toggleSlowMo('vid-frame-8', 1.0)">▶ 1.0x Normal</button>
+</div>
+</div>
+<div class="video-container">
+<div class="video-header-bar">
+<h3 id="mod3-v3-title">Numbers & Numerical Sign Sentences</h3>
+<label class="watch-check"><input type="checkbox" id="watch-m3-v3" onchange="checkModuleVideos(3)"> <span class="mark-watched-label">Mark Watched</span></label>
+</div>
+<iframe id="vid-frame-9" src="https://www.youtube.com/embed/vnH2BmcSRMA?enablejsapi=1" allowfullscreen></iframe>
+<div class="video-player-controls">
+<button class="vid-ctrl-btn replay-10s-btn" onclick="replayTenSeconds('vid-frame-9')">⏪ Replay 10s</button>
+<button class="vid-ctrl-btn slow-mo-btn" onclick="toggleSlowMo('vid-frame-9', 0.5)">🐢 0.5x Slow-Mo</button>
+<button class="vid-ctrl-btn normal-speed-btn" onclick="toggleSlowMo('vid-frame-9', 1.0)">▶ 1.0x Normal</button>
+</div>
+</div>
+<div id="mod3-lock-banner" class="lock-banner">
+<i class="fa-solid fa-lock"></i> <span id="mod3-lock-text">Watch all 3 episodes to unlock the Module 3 Clinical Scenario Test.</span>
+</div>
+<button class="next-btn" id="mod3-test-btn" onclick="startModuleTest(3)" disabled style="background: #38a169;">Take Module 3 Clinical Scenario Test (10 Qs) →</button>
+</section>
+
+<!-- Dynamic Module Clinical Test View -->
+<section id="module-test-view" class="view">
+<div id="module-test-container"></div>
+</section>
+
+<!-- Final Exam Section -->
+<section id="exam-section" class="view">
+<button class="back-btn back-to-dash-btn" onclick="switchView('dashboard')">← Back to Dashboard</button>
+<h2 id="exam-view-title">🏆 Cryptographic Certification Exam</h2>
+<div class="card exam-overview-card">
+<h3 id="exam-guide-heading">Certification Guidelines</h3>
+<p id="exam-guide-intro">Welcome to the official assessment portal. Certificates are valid for <strong>3 months</strong> from the date of issue.</p>
+<ul style="margin: 1rem 0 1.5rem 1.2rem; font-size: 0.95rem;">
+<li id="exam-rule-1">Consists of <strong>20 comprehensive questions</strong> covering ISL theory, grammar, and etiquette.</li>
+<li id="exam-rule-2">Requires a minimum passing score of <strong>75% (15/20 correct)</strong>.</li>
+<li id="exam-rule-3">Generates a direct, downloadable high-resolution PDF certificate with a verifiable SHA-256 HMAC cryptographic token.</li>
+</ul>
+<button class="start-quiz-btn" id="exam-start-btn" onclick="startQuiz()">Launch Certification Exam Now</button>
+</div>
+</section>
+
+<!-- Quiz Container -->
+<section id="quiz-view" class="view">
+<div id="quiz-container"></div>
+</section>
+
+<!-- Name Input -->
+<section id="name-input-view" class="view">
+<div class="card name-input-card">
+<h2 id="name-input-title">🏆 Incredible Job!</h2>
+<p id="name-input-desc">You have successfully passed the certification examination. Verify your full name below for your official certificate:</p> 
+<input type="text" id="cert-name-input" placeholder="Your Full Name" autocomplete="name">
+<br>
+<button onclick="generateCertificate()" id="name-input-submit-btn">Generate My Verified Certificate</button>
+</div>
+</section>
+
+<!-- Verification Portal -->
+<section id="verify-view" class="view">
+<button class="back-btn back-to-dash-btn" onclick="switchView('dashboard')">← Back to Dashboard</button>
+<div class="card">
+<h2 id="verify-view-title">🔍 Cryptographic Certificate Validation Portal</h2>
+<p id="verify-view-desc" style="margin: 0.75rem 0; font-size: 0.9rem; color: #4a5568;">Enter a secure credential ID (e.g., <code>SLP-2026-XXXX</code>) or full token signature to verify authenticity against SignLingo records.</p>
+<input type="text" id="verify-input" placeholder="Enter Credential ID..." style="width: 100%; padding: 0.75rem; border: 2px solid #cbd5e0; border-radius: 10px; font-size: 1rem; margin-top: 0.5rem; margin-bottom: 1rem;">
+<button onclick="verifyCredential()" id="verify-submit-btn" style="width: 100%;">Verify Credential</button>
+<div id="verify-result" style="margin-top: 1.25rem;"></div> 
+</div>
+</section>
+
+<!-- Certificate View -->
+<section id="result-view" class="view">
+<div id="result-content"></div>
+</section>
+</main>
+
+<!-- SignLingo Vector Sign Chatbot Widget -->
+<div id="signlingo-chatbot-container">
+<button id="chatbot-toggle-btn" aria-label="Open SignLingo Chatbot">
+<i class="fa-solid fa-robot"></i>
+<span class="chatbot-badge">AI</span>
+</button>
+</div>
+<div id="chatbot-window" class="chatbot-hidden">
+<div class="chatbot-header">
+<div class="chatbot-title-area">
+<div class="chatbot-avatar">
+<i class="fa-solid fa-hands-asl-interpreting"></i>
+</div>
+<div>
+<h4 id="bot-header-title">ISL Sign Visualizer</h4>
+<span class="chatbot-status" id="bot-header-status">Online • Vector ISL Active</span>
+</div>
+</div>
+<button id="chatbot-close-btn" aria-label="Close Chat">
+<i class="fa-solid fa-xmark"></i></button>
+</div>
+<div id="chatbot-messages" class="chatbot-messages">
+<div class="chat-message bot-message">
+<div class="message-content" id="bot-welcome-msg">
+Namaste! 🙏 Type any word or sentence (e.g., <em>"Doctor"</em>, <em>"Help"</em>, <em>"Hospital"</em>, or <em>"Emergency"</em>) to see its visual sign cards!
+</div>
+<span class="message-time">Just now</span>
+</div>
+</div>
+<div class="chatbot-suggestions">
+<button class="suggestion-chip" id="chip-hosp" data-query="Hospital">Hospital</button>
+<button class="suggestion-chip" id="chip-doc" data-query="Doctor">Doctor</button>
+<button class="suggestion-chip" id="chip-help" data-query="Help">Help</button>
+<button class="suggestion-chip" id="chip-emg" data-query="Emergency">Emergency</button>
+<button class="suggestion-chip" id="chip-water" data-query="Water">Water</button>
+</div>
+<div class="chatbot-input-area">
+<input type="text" id="chatbot-user-input" placeholder="Type a word or sentence for ISL signs..." autocomplete="off">
+<button id="chatbot-send-btn" aria-label="Send Message">
+<i class="fa-solid fa-paper-plane"></i>
+</button>
+</div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
