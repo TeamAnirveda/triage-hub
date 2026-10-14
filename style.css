@@ -1118,7 +1118,238 @@ color: #000000 !important;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
 }
-.triage-grid-container {
-  display: grid;
+.triage-grid-container {display: grid;
   grid-template-columns: 1fr;
+                        gap: 1rem;
+}
+@media (min-width: 1024px) {
+  .triage-grid-container {
+    grid-template-columns: 1.1fr 1fr;
+  }
+}
+.triage-card {
+  display: flex;
+  flex-direction: column;
+  padding: 1.25rem;
+  margin-bottom: 0;
+}
+.terminal-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+.patient-banner {
+  background: #eff6ff;
+  color: #1e40af;
+  border-left: 4px solid #2563eb;
+}
+.staff-banner {
+  background: #f0fdf4;
+  color: #166534;
+  border-left: 4px solid #16a34a;
+}
+.pulse-indicator {
+  color: #16a34a;
+  font-weight: 800;
+  animation: pulse-op 1.5s infinite;
+}
+@keyframes pulse-op {
+  0% { opacity: 0.4; }
+  50% { opacity: 1; }
+  100% { opacity: 0.4; }
+}
+.detected-sign-pill {
+  margin: 0.75rem auto 0 auto;
+  background: #1e293b;
+  color: #38bdf8;
+  font-family: monospace;
+  font-size: 0.85rem;
+  padding: 0.4rem 1rem;
+  border-radius: 20px;
+  text-align: center;
+  font-weight: 700;
+}
+.patient-playback-box {
+  margin-top: 0.75rem;
+  background: #f8fafc;
+  border: 1.5px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.75rem;
+}
+.sign-playback-scroll {
+  display: flex;
+  gap: 0.5rem;
+  overflow-x: auto;
+  min-height: 95px;
+  padding: 0.3rem;
+}
+.pain-scale-container {
+  margin-top: 0.75rem;
+  padding: 0.6rem;
+  background: #fffbeb;
+  border: 1px solid #fef3c7;
+  border-radius: 10px;
+}
+.pain-scale-slider {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.25rem;
+  margin-bottom: 0.3rem;
+}
+.pain-level-btn {
+  flex: 1;
+  background: white;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 8px;
+  color: #1e293b;
+  padding: 0.4rem 0.2rem;
+  font-size: 0.8rem;
+  margin-top: 0;
+  font-weight: 700;
+  transition: all 0.2s;
+}
+.pain-level-btn.active-pain {
+  background: #ef4444;
+  color: white;
+  border-color: #b91c1c;
+  transform: scale(1.05);
+}
+.clinical-box {
+  background: #f8fafc;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 10px;
+  padding: 0.85rem;
+}
+.sub-label {
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: #475569;
+  display: block;
+  margin-bottom: 0.35rem;
+}
+.live-sentence-stream {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.4;
+  min-height: 48px;
+}
+.symptom-tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.symptom-tag {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.tag-red { background: #fee2e2; color: #991b1b; border: 1px solid #f87171; }
+.tag-yellow { background: #fef3c7; color: #92400e; border: 1px solid #fcd34d; }
+.tag-green { background: #dcfce7; color: #166534; border: 1px solid #86efac; }
+.vitals-entry-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+.vitals-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: #475569;
+  display: block;
+  margin-bottom: 0.2rem;
+}
+.vitals-input {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1.5px solid #cbd5e1;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.comorbidity-toggles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+.comorbid-chip {
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #f1f5f9;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.staff-reply-section {
+  margin-top: 0.75rem;
+  background: #f8fafc;
+  padding: 0.75rem;
+  border-radius: 10px;
+  border: 1.5px solid #e2e8f0;
+}
+.quick-chip-tray {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+.quick-reply-btn {
+  background: white;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  margin-top: 0;
+  font-weight: 600;
+}
+.icon-toggle-btn {
+  background: white;
+  border: 1px solid #cbd5e1;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  margin-top: 0;
+  color: #334155;
+  font-weight: 700;
+}
+
+/* Print & PDF Export Rules */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #result-content,
+  #result-content *,
+  #printable-triage-ticket,
+  #printable-triage-ticket * {
+    visibility: visible;
+  }
+  #result-content, #printable-triage-ticket {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+  .certificate-box {
+    box-shadow: none !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+  }
+  
   
