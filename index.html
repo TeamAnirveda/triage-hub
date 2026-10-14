@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SignLingo TriageHub - Emergency ISL Translation Terminal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- MediaPipe Holistic & Camera Dependencies -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
+  
+  <!-- Client-side PDF Ticket Generator -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <i class="fa-solid fa-hospital-user"></i>
+      <h2>SignLingo <span>TriageHub</span></h2>
+    </div>
+    <div class="header-status">
+      <span class="pulse-indicator"></span> Bi-Directional Triage Terminal Active
+    </div>
+  </header>
+
+  <main class="triage-grid">
+    <!-- TERMINAL A: PATIENT INTERACTION (Dynamic Skeletal Vision) -->
+    <section class="terminal-panel patient-panel">
+      <div class="panel-header">
+        <h3><i class="fa-solid fa-camera"></i> Patient Input Terminal (Dynamic ISL Vision)</h3>
+        <span class="badge">Side A (Patient)</span>
+      </div>
+
+      <div class="video-wrapper">
+        <video id="webcam" playsinline muted autoplay></video>
+        <canvas id="output-canvas"></canvas>
+        <div id="detection-pill" class="detection-pill">Observing Gestures...</div>
+      </div>
+
+      <!-- REVERSE TRANSLATION DISPLAY: Staff to Patient -->
+      <div class="patient-visual-feedback">
+        <h4>Staff Directions to Patient / डॉक्टरांचे निर्देश:</h4>
+        <div id="visual-sign-card" class="visual-sign-card">
+          <p class="placeholder-text">Staff messages appear here as signs & visual prompts.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- TERMINAL B: CLINICAL STAFF CONSOLE -->
+    <section class="terminal-panel staff-panel">
+      <div class="panel-header">
+        <h3><i class="fa-solid fa-user-doctor"></i> Healthcare Staff Console</h3>
+        <span class="badge staff-badge">Side B (Triage Staff)</span>
+      </div>
+
+      <!-- Real-Time Decoded Symptoms Feed -->
+      <div class="card">
+        <h4>Auto-Decoded Symptoms (from Patient ISL Gestures)</h4>
+        <div id="symptoms-bucket" class="symptoms-bucket">
+          <span class="empty-hint">No symptoms registered yet. Perform a sign in camera view.</span>
+        </div>
+      </div>
+
+      <!-- Staff Speech / Visual Response Triggers -->
+      <div class="card">
+        <h4>Communicate with Patient (Sends Visual Signs to Patient Screen)</h4>
+        <div class="prompt-chips">
+          <button onclick="dispatchToPatient('Doctor')">Doctor Coming / डॉक्टर येत आहेत</button>
+          <button onclick="dispatchToPatient('Wait')">Please Wait / कृपया थांबा</button>
+          <button onclick="dispatchToPatient('Hospital')">Hospital Admission / भरती प्रक्रिया</button>
+          <button onclick="dispatchToPatient('Water')">Drink Water / पाणी प्या</button>
+        </div>
+        <div class="speech-input-box">
+          <input type="text" id="nurse-custom-text" placeholder="Type custom instruction or direction...">
+          <button onclick="sendCustomStaffText()"><i class="fa-solid fa-paper-plane"></i> Send</button>
+        </div>
+      </div>
+
+      <!-- Action Panel: Generate Triage Summary -->
+      <div class="card action-card">
+        <button class="generate-btn" onclick="commitTriageIntake()">
+          <i class="fa-solid fa-file-medical"></i> Finalize & Generate Triage Ticket
+        </button>
+      </div>
+
+      <!-- PDF-Ready Triage Ticket Output -->
+      <div id="triage-ticket-output" style="display: none;"></div>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
