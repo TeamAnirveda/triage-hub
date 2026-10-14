@@ -153,14 +153,40 @@ holistic.onResults(async (results) => {
   canvasCtx.restore();
 });
 
-const camera = new Camera(videoElement, {
-  onFrame: async () => {
-    await holistic.send({ image: videoElement });
-  },
-  width: 480,
-  height: 360
-});
-camera.start();
+// Robust mobile/tablet front-camera launcher
+async function initCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: {
+        facingMode: "user",
+        width: { ideal: 480 },
+        height: { ideal: 360 }
+      },
+      audio: false
+    });
+    
+    videoElement.srcObject = stream;
+    await videoElement.play();
+
+    // Frame processing loop for MediaPipe
+    async function processLoop() {
+      if (!videoElement.paused && !videoElement.ended) {
+        await holistic.send({ image: videoElement });
+      }
+      requestAnimationFrame(processLoop);
+    }
+    requestAnimationFrame(processLoop);
+
+  } catch (err) {
+    console.error("Camera access error:", err);
+    detectionPill.innerText = "Camera Error: " + err.message;
+    detectionPill.style.background = "#b91c1c";
+    alert("Camera failed: Please allow camera permissions in Chrome settings.");
+  }
+}
+
+initCamera();
+
 
 // ----------------- INTAKE QUEUE & REVERSE DISPATCH -----------------
 function registerSymptom(symptom) {
